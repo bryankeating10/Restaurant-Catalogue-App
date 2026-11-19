@@ -46,10 +46,16 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.gridRow}>
-            {/* Unlinked Skeletons */}
-            <View style={styles.skeletonButton}>
-              <Text style={styles.skeletonLabel}>+ New Dining Entry</Text>
-            </View>
+            {/* Linked Dining Entries Button */}
+            <TouchableOpacity
+              style={styles.activeButton}
+              activeOpacity={0.7}
+              onPress={() => router.push('/dining-entries')}
+            >
+              <Text style={styles.activeLabel}>Dining Entries</Text>
+            </TouchableOpacity>
+
+            {/* Unlinked Skeleton */}
             <View style={styles.skeletonButton}>
               <Text style={styles.skeletonLabel}>Dining Statistics</Text>
             </View>
