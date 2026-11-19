@@ -1,39 +1,49 @@
+import { useRouter } from 'expo-router';
 import {
-  Platform,
-  SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  // Placeholder skeleton items for the bottom half
+  const router = useRouter();
   const recentSkeletons = [1, 2, 3, 4, 5];
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* App Header */}
+        {/* App Header with Settings Placeholder */}
         <View style={styles.header}>
           <Text style={styles.title}>Restaurant Catalog</Text>
+          <View style={styles.settingsSkeleton}>
+            <Text style={styles.settingsText}>⚙</Text>
+          </View>
         </View>
 
-        {/* TOP HALF: 2x2 Grid of 4 Skeleton Action Buttons */}
+        {/* TOP HALF: 2x2 Grid of 4 Action Buttons */}
         <View style={styles.topHalf}>
           <View style={styles.gridRow}>
+            {/* Linked Restaurants Button */}
+            <TouchableOpacity
+              style={styles.activeButton}
+              activeOpacity={0.7}
+              onPress={() => router.push('/restaurants')}
+            >
+              <Text style={styles.activeLabel}>Restaurants</Text>
+            </TouchableOpacity>
+
+            {/* Unlinked Skeletons */}
             <View style={styles.skeletonButton}>
-              <Text style={styles.skeletonLabel}>+ New Restaurant</Text>
-            </View>
-            <View style={styles.skeletonButton}>
-              <Text style={styles.skeletonLabel}>+ New Dining Entry</Text>
+              <Text style={styles.skeletonLabel}>Dishes</Text>
             </View>
           </View>
 
           <View style={styles.gridRow}>
             <View style={styles.skeletonButton}>
-              <Text style={styles.skeletonLabel}>Favorites</Text>
+              <Text style={styles.skeletonLabel}>+ New Dining Entry</Text>
             </View>
             <View style={styles.skeletonButton}>
               <Text style={styles.skeletonLabel}>Dining Statistics</Text>
@@ -52,16 +62,11 @@ export default function HomeScreen() {
           >
             {recentSkeletons.map((item) => (
               <View key={item} style={styles.skeletonRow}>
-                {/* Left thumbnail placeholder */}
                 <View style={styles.skeletonAvatar} />
-
-                {/* Middle text line placeholders */}
                 <View style={styles.skeletonTextGroup}>
                   <View style={styles.skeletonTitleBar} />
                   <View style={styles.skeletonSubtitleBar} />
                 </View>
-
-                {/* Right badge placeholder (Restaurant vs Entry) */}
                 <View style={styles.skeletonBadge} />
               </View>
             ))}
@@ -76,8 +81,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    // Ensures content clears the status bar on Android devices
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
@@ -85,6 +88,9 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -94,8 +100,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-
-  /* --- TOP HALF (50% of remaining height) --- */
+  settingsSkeleton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#D1D5DB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingsText: {
+    fontSize: 18,
+    color: '#6B7280',
+  },
   topHalf: {
     flex: 1,
     paddingTop: 14,
@@ -118,14 +137,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
   },
+  activeButton: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderStyle: 'solid',
+    borderColor: '#111827',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+  },
   skeletonLabel: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: '#6B7280',
     textAlign: 'center',
   },
-
-  /* --- BOTTOM HALF (50% of remaining height) --- */
+  activeLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+  },
   bottomHalf: {
     flex: 1,
     paddingTop: 12,
