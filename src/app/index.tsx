@@ -26,7 +26,6 @@ export default function HomeScreen() {
         {/* TOP HALF: 2x2 Grid of 4 Action Buttons */}
         <View style={styles.topHalf}>
           <View style={styles.gridRow}>
-            {/* Linked Restaurants Button */}
             <TouchableOpacity
               style={styles.activeButton}
               activeOpacity={0.7}
@@ -35,7 +34,6 @@ export default function HomeScreen() {
               <Text style={styles.activeLabel}>Restaurants</Text>
             </TouchableOpacity>
 
-            {/* Linked Dishes Button */}
             <TouchableOpacity
               style={styles.activeButton}
               activeOpacity={0.7}
@@ -46,7 +44,6 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.gridRow}>
-            {/* Linked Dining Entries Button */}
             <TouchableOpacity
               style={styles.activeButton}
               activeOpacity={0.7}
@@ -55,10 +52,13 @@ export default function HomeScreen() {
               <Text style={styles.activeLabel}>Dining Entries</Text>
             </TouchableOpacity>
 
-            {/* Unlinked Skeleton */}
-            <View style={styles.skeletonButton}>
-              <Text style={styles.skeletonLabel}>Dining Statistics</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.activeButton}
+              activeOpacity={0.7}
+              onPress={() => router.push('/dining-statistics')}
+            >
+              <Text style={styles.activeLabel}>Dining Statistics</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -137,17 +137,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  skeletonButton: {
-    flex: 1,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 12,
-  },
   activeButton: {
     flex: 1,
     backgroundColor: '#F9FAFB',
@@ -158,12 +147,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 12,
-  },
-  skeletonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-    textAlign: 'center',
   },
   activeLabel: {
     fontSize: 16,

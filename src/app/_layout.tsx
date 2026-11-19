@@ -10,6 +10,7 @@ export default function RootLayout() {
       <Stack.Screen name="new-dish" />
       <Stack.Screen name="dining-entries" />
       <Stack.Screen name="new-dining-entry" />
+      <Stack.Screen name="dining-statistics" />
     </Stack>
   );
 }
