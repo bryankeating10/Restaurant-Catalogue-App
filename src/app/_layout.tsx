@@ -6,6 +6,8 @@ export default function RootLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="restaurants" />
       <Stack.Screen name="new-restaurant" />
+      <Stack.Screen name="dishes" />
+      <Stack.Screen name="new-dish" />
     </Stack>
   );
 }
