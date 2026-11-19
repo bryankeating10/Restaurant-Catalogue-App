@@ -15,12 +15,16 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* App Header with Settings Placeholder */}
+        {/* App Header with Linked Settings Gear Button */}
         <View style={styles.header}>
           <Text style={styles.title}>Restaurant Catalog</Text>
-          <View style={styles.settingsSkeleton}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            activeOpacity={0.7}
+            onPress={() => router.push('/settings')}
+          >
             <Text style={styles.settingsText}>⚙</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* TOP HALF: 2x2 Grid of 4 Action Buttons */}
@@ -111,20 +115,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  settingsSkeleton: {
+  settingsButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
     borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
+    borderStyle: 'solid',
+    borderColor: '#111827',
     justifyContent: 'center',
     alignItems: 'center',
   },
   settingsText: {
     fontSize: 18,
-    color: '#6B7280',
+    color: '#111827',
   },
   topHalf: {
     flex: 1,
