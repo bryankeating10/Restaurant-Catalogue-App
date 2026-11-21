@@ -44,7 +44,7 @@ export default function NewRestaurantScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      aspect: [16, 9],
+      aspect: [1, 1],
       quality: 0.8,
     });
 
@@ -152,11 +152,11 @@ export default function NewRestaurantScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 4. Single Cover Image Upload */}
+          {/* 4. Single Square Cover Image Upload */}
           <View style={styles.fieldGroup}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Cover Photo</Text>
-              <Text style={styles.helperText}>Optional · 1 image</Text>
+              <Text style={styles.helperText}>Optional · 1 square image</Text>
             </View>
 
             {coverImage ? (
@@ -164,6 +164,7 @@ export default function NewRestaurantScreen() {
                 <Image
                   source={{ uri: coverImage }}
                   style={styles.previewImage}
+                  resizeMode="cover"
                 />
                 <View style={styles.imageActionRow}>
                   <TouchableOpacity
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
   },
   previewImage: {
     width: '100%',
-    height: 180,
+    aspectRatio: 1,
     borderRadius: 12,
     backgroundColor: '#E5E7EB',
   },

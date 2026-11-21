@@ -170,12 +170,13 @@ export default function RestaurantsScreen() {
               const stats = getRestaurantStats(restaurant.id);
               return (
                 <View key={restaurant.id} style={styles.card}>
-                  {/* Top Cover Image + Corner Actions */}
+                  {/* Square Cover Image + Corner Actions */}
                   {restaurant.coverImage ? (
                     <View style={styles.coverWrapper}>
                       <Image
                         source={{ uri: restaurant.coverImage }}
                         style={styles.coverImage}
+                        resizeMode="cover"
                       />
                       <View style={styles.cardCornerActions}>
                         <TouchableOpacity
@@ -417,13 +418,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   coverWrapper: {
-    height: 140,
+    width: '100%',
+    aspectRatio: 1,
     position: 'relative',
+    backgroundColor: '#E5E7EB',
   },
   coverImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#E5E7EB',
   },
   noCoverHeader: {
     flexDirection: 'row',
