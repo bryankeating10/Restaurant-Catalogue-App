@@ -1,16 +1,89 @@
-import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCatalog } from '../context/CatalogContext';
 
 export default function NewRestaurantScreen() {
   const router = useRouter();
-  const ratingScale = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const params = useLocalSearchParams<{
+    returnToVisit?: string;
+    returnToTakeout?: string;
+  }>();
+  const { cuisines, addRestaurant, setPendingRestaurantId } = useCatalog();
+
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [cuisine, setCuisine] = useState('');
+  const [coverImage, setCoverImage] = useState<string | undefined>(undefined);
+  const [cuisineModalOpen, setCuisineModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Permission Needed',
+        'Please allow photo library access to choose a cover photo.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      setCoverImage(result.assets[0].uri);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Missing Name', 'Please enter a restaurant name.');
+      return;
+    }
+    if (!cuisine) {
+      Alert.alert('Missing Cuisine', 'Please select a cuisine.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const created = await addRestaurant({
+        name: name.trim(),
+        address: address.trim(),
+        cuisine,
+        coverImage,
+      });
+
+      // If opened mid-entry, queue this ID so the Visit/Takeout form auto-selects it
+      if (params.returnToVisit === 'true' || params.returnToTakeout === 'true') {
+        setPendingRestaurantId(created.id);
+      }
+
+      router.back();
+    } catch {
+      Alert.alert('Save Failed', 'Could not save restaurant. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -18,114 +91,170 @@ export default function NewRestaurantScreen() {
         {/* Screen Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButtonSkeleton}
+            style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.backText}>← Back</Text>
+            <Text style={styles.backText}>← Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.title}>New Restaurant</Text>
           <View style={styles.headerSpacer} />
         </View>
 
-        {/* Scrollable Form Skeleton */}
         <ScrollView
           style={styles.formScroll}
           contentContainerStyle={styles.formContent}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* 1. Restaurant ID (Read-Only / Auto-Generated Placeholder) */}
+          {/* 1. Restaurant Name */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Restaurant ID (Auto-generated)</Text>
-            <View style={[styles.inputSkeleton, styles.readOnlySkeleton]}>
-              <Text style={styles.placeholderText}>e.g., REST-84920</Text>
-            </View>
+            <Text style={styles.label}>Name *</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g., Osteria Mozza"
+              placeholderTextColor="#9CA3AF"
+              value={name}
+              onChangeText={setName}
+            />
           </View>
 
-          {/* 2. Restaurant Name */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Name</Text>
-            <View style={styles.inputSkeleton}>
-              <Text style={styles.placeholderText}>Enter restaurant name...</Text>
-            </View>
-          </View>
-
-          {/* 3. Address */}
+          {/* 2. Address */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Address</Text>
-            <View style={styles.inputSkeleton}>
-              <Text style={styles.placeholderText}>Street, City, State...</Text>
-            </View>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Street, City, State..."
+              placeholderTextColor="#9CA3AF"
+              value={address}
+              onChangeText={setAddress}
+            />
           </View>
 
-          {/* 4. Cuisine Dropdown Skeleton */}
+          {/* 3. Cuisine Selector */}
           <View style={styles.fieldGroup}>
             <View style={styles.labelRow}>
-              <Text style={styles.label}>Cuisine</Text>
-              <Text style={styles.helperText}>Customizable in Settings later</Text>
+              <Text style={styles.label}>Cuisine *</Text>
+              <Text style={styles.helperText}>Customizable in Settings</Text>
             </View>
-            <View style={styles.dropdownSkeleton}>
-              <Text style={styles.placeholderText}>Select a cuisine...</Text>
-              <Text style={styles.dropdownArrow}>▼</Text>
-            </View>
-          </View>
-
-          {/* 5. Atmosphere Rating (1-10) */}
-          <View style={styles.fieldGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Atmosphere Rating</Text>
-              <Text style={styles.helperText}>1 – 10</Text>
-            </View>
-            <View style={styles.ratingRow}>
-              {ratingScale.map((num) => (
-                <View key={num} style={styles.ratingBoxSkeleton}>
-                  <Text style={styles.ratingNum}>{num}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* 6. Service Rating (1-10) */}
-          <View style={styles.fieldGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Service Rating</Text>
-              <Text style={styles.helperText}>1 – 10</Text>
-            </View>
-            <View style={styles.ratingRow}>
-              {ratingScale.map((num) => (
-                <View key={num} style={styles.ratingBoxSkeleton}>
-                  <Text style={styles.ratingNum}>{num}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* 7. Description (Multi-line Text Area) */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Description</Text>
-            <View style={[styles.inputSkeleton, styles.textAreaSkeleton]}>
-              <Text style={styles.placeholderText}>
-                Notes on vibe, parking, reservations, specialties...
+            <TouchableOpacity
+              style={styles.dropdownButton}
+              activeOpacity={0.7}
+              onPress={() => setCuisineModalOpen(true)}
+            >
+              <Text
+                style={
+                  cuisine ? styles.dropdownValueText : styles.placeholderText
+                }
+              >
+                {cuisine || 'Select a cuisine...'}
               </Text>
-            </View>
+              <Text style={styles.dropdownArrow}>▼</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* 8. Single Restaurant Image Upload Slot */}
+          {/* 4. Single Cover Image Upload */}
           <View style={styles.fieldGroup}>
             <View style={styles.labelRow}>
-              <Text style={styles.label}>Restaurant Photo</Text>
-              <Text style={styles.helperText}>Max 1 image</Text>
+              <Text style={styles.label}>Cover Photo</Text>
+              <Text style={styles.helperText}>Optional · 1 image</Text>
             </View>
-            <View style={styles.singleImageSkeleton}>
-              <Text style={styles.imageIcon}>[ + ]</Text>
-              <Text style={styles.placeholderText}>Tap to upload 1 cover photo</Text>
-            </View>
+
+            {coverImage ? (
+              <View style={styles.imagePreviewWrapper}>
+                <Image
+                  source={{ uri: coverImage }}
+                  style={styles.previewImage}
+                />
+                <View style={styles.imageActionRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryBtn}
+                    onPress={pickImage}
+                  >
+                    <Text style={styles.secondaryBtnText}>Change Photo</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => setCoverImage(undefined)}
+                  >
+                    <Text style={styles.removeBtnText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.imagePickerBox}
+                activeOpacity={0.7}
+                onPress={pickImage}
+              >
+                <Text style={styles.imageIcon}>+ Add Cover Photo</Text>
+                <Text style={styles.placeholderText}>
+                  Tap to choose from photo library
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Save Action Skeleton */}
-          <View style={styles.submitButtonSkeleton}>
-            <Text style={styles.submitText}>Save Restaurant</Text>
-          </View>
+          {/* Save Action */}
+          <TouchableOpacity
+            style={[styles.submitButton, isSaving && styles.submitDisabled]}
+            activeOpacity={0.8}
+            disabled={isSaving}
+            onPress={handleSave}
+          >
+            <Text style={styles.submitText}>
+              {isSaving ? 'Saving...' : 'Save Restaurant'}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
+
+        {/* Cuisine Picker Modal */}
+        <Modal
+          visible={cuisineModalOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setCuisineModalOpen(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Cuisine</Text>
+                <TouchableOpacity onPress={() => setCuisineModalOpen(false)}>
+                  <Text style={styles.modalClose}>Done</Text>
+                </TouchableOpacity>
+              </View>
+
+              <FlatList
+                data={cuisines}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => {
+                  const selected = item === cuisine;
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.modalOption,
+                        selected && styles.modalOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setCuisine(item);
+                        setCuisineModalOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalOptionText,
+                          selected && styles.modalOptionTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                      {selected && <Text style={styles.checkmark}>✓</Text>}
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -148,7 +277,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  backButtonSkeleton: {
+  backButton: {
     paddingVertical: 4,
     paddingRight: 8,
   },
@@ -163,7 +292,7 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   headerSpacer: {
-    width: 50,
+    width: 60,
   },
   formScroll: {
     flex: 1,
@@ -190,30 +319,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
   },
-  inputSkeleton: {
-    height: 46,
+  textInput: {
+    height: 48,
     backgroundColor: '#F9FAFB',
     borderWidth: 1.5,
-    borderStyle: 'dashed',
     borderColor: '#D1D5DB',
     borderRadius: 10,
     paddingHorizontal: 12,
-    justifyContent: 'center',
+    fontSize: 15,
+    color: '#111827',
   },
-  readOnlySkeleton: {
-    backgroundColor: '#F3F4F6',
-  },
-  dropdownSkeleton: {
-    height: 46,
+  dropdownButton: {
+    height: 48,
     backgroundColor: '#F9FAFB',
     borderWidth: 1.5,
-    borderStyle: 'dashed',
     borderColor: '#D1D5DB',
     borderRadius: 10,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  dropdownValueText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
   },
   dropdownArrow: {
     fontSize: 12,
@@ -223,62 +353,132 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#9CA3AF',
   },
-  ratingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 4,
-  },
-  ratingBoxSkeleton: {
-    flex: 1,
-    height: 38,
-    backgroundColor: '#F3F4F6',
+  imagePickerBox: {
+    height: 160,
+    backgroundColor: '#F9FAFB',
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ratingNum: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  textAreaSkeleton: {
-    height: 96,
-    paddingVertical: 12,
-    justifyContent: 'flex-start',
-  },
-  singleImageSkeleton: {
-    height: 150,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
+    borderColor: '#9CA3AF',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
   },
   imageIcon: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#6B7280',
+    color: '#374151',
   },
-  submitButtonSkeleton: {
-    marginTop: 8,
-    height: 50,
+  imagePreviewWrapper: {
+    gap: 10,
+  },
+  previewImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
     backgroundColor: '#E5E7EB',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#9CA3AF',
+  },
+  imageActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  secondaryBtn: {
+    flex: 1,
+    height: 40,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  secondaryBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  removeBtn: {
+    paddingHorizontal: 16,
+    height: 40,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#B91C1C',
+  },
+  submitButton: {
+    marginTop: 8,
+    height: 52,
+    backgroundColor: '#111827',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  submitDisabled: {
+    opacity: 0.6,
+  },
   submitText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#4B5563',
+    color: '#FFFFFF',
+  },
+
+  /* --- MODAL --- */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalClose: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalOptionSelected: {
+    backgroundColor: '#F9FAFB',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: '#374151',
+  },
+  modalOptionTextSelected: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+  checkmark: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
   },
 });
