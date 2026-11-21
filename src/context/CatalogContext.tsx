@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
-    DiningEntry,
-    Dish,
-    Restaurant,
-    RestaurantStats,
+  DiningEntry,
+  Dish,
+  Restaurant,
+  RestaurantStats,
 } from '../types/catalog';
 
 const STORAGE_KEY = '@restaurant_catalog_v1';
@@ -17,16 +17,24 @@ interface CatalogContextType {
   cuisines: string[];
   categories: string[];
   dietaryTags: string[];
-  // Active draft selection when creating a restaurant/dish mid-entry
+  // Active draft selections when creating a restaurant/dish mid-entry
   pendingRestaurantId: string | null;
   setPendingRestaurantId: (id: string | null) => void;
-  // Actions
+  pendingDishId: string | null;
+  setPendingDishId: (id: string | null) => void;
+  // Restaurant Actions
   addRestaurant: (
     data: Omit<Restaurant, 'id' | 'isFavorite' | 'createdAt'>
   ) => Promise<Restaurant>;
   toggleFavoriteRestaurant: (id: string) => Promise<void>;
   deleteRestaurant: (id: string) => Promise<void>;
   getRestaurantStats: (restaurantId: string) => RestaurantStats;
+  // Dish Actions
+  addDish: (
+    data: Omit<Dish, 'id' | 'isFavorite' | 'createdAt'>
+  ) => Promise<Dish>;
+  toggleFavoriteDish: (id: string) => Promise<void>;
+  deleteDish: (id: string) => Promise<void>;
 }
 
 const DEFAULT_CUISINES = [
@@ -70,6 +78,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   const [pendingRestaurantId, setPendingRestaurantId] = useState<string | null>(
     null
   );
+  const [pendingDishId, setPendingDishId] = useState<string | null>(null);
 
   // Load saved data on startup
   useEffect(() => {
@@ -141,7 +150,35 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     await persist({ restaurants: updated });
   };
 
-  // Dynamically aggregates all entries linked to a specific restaurant
+  const addDish = async (
+    data: Omit<Dish, 'id' | 'isFavorite' | 'createdAt'>
+  ): Promise<Dish> => {
+    const newDish: Dish = {
+      ...data,
+      id: `dish_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      isFavorite: false,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newDish, ...dishes];
+    setDishes(updated);
+    await persist({ dishes: updated });
+    return newDish;
+  };
+
+  const toggleFavoriteDish = async (id: string) => {
+    const updated = dishes.map((d) =>
+      d.id === id ? { ...d, isFavorite: !d.isFavorite } : d
+    );
+    setDishes(updated);
+    await persist({ dishes: updated });
+  };
+
+  const deleteDish = async (id: string) => {
+    const updated = dishes.filter((d) => d.id !== id);
+    setDishes(updated);
+    await persist({ dishes: updated });
+  };
+
   const getRestaurantStats = (restaurantId: string): RestaurantStats => {
     const linked = entries
       .filter((e) => e.restaurantId === restaurantId)
@@ -190,10 +227,15 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
         dietaryTags,
         pendingRestaurantId,
         setPendingRestaurantId,
+        pendingDishId,
+        setPendingDishId,
         addRestaurant,
         toggleFavoriteRestaurant,
         deleteRestaurant,
         getRestaurantStats,
+        addDish,
+        toggleFavoriteDish,
+        deleteDish,
       }}
     >
       {children}

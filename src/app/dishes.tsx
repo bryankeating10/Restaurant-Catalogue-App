@@ -1,115 +1,322 @@
 import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCatalog } from '../context/CatalogContext';
 
 export default function DishesScreen() {
   const router = useRouter();
-  const dishSkeletons = [1, 2, 3, 4];
+  const {
+    dishes,
+    restaurants,
+    categories,
+    dietaryTags,
+    toggleFavoriteDish,
+    deleteDish,
+  } = useCatalog();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedDietary, setSelectedDietary] = useState<string | null>(null);
+
+  const restaurantMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    restaurants.forEach((r) => {
+      map[r.id] = r.name;
+    });
+    return map;
+  }, [restaurants]);
+
+  const filteredDishes = useMemo(() => {
+    return dishes.filter((d) => {
+      if (favoritesOnly && !d.isFavorite) return false;
+      if (selectedCategory && d.category !== selectedCategory) return false;
+      if (selectedDietary && !d.dietaryTags.includes(selectedDietary)) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const restName = (restaurantMap[d.restaurantId] || '').toLowerCase();
+        const matchesDish = d.name.toLowerCase().includes(q);
+        const matchesDesc = d.description.toLowerCase().includes(q);
+        const matchesRest = restName.includes(q);
+        if (!matchesDish && !matchesDesc && !matchesRest) return false;
+      }
+      return true;
+    });
+  }, [
+    dishes,
+    favoritesOnly,
+    selectedCategory,
+    selectedDietary,
+    searchQuery,
+    restaurantMap,
+  ]);
+
+  const confirmDelete = (id: string, name: string) => {
+    Alert.alert('Delete Dish', `Are you sure you want to delete "${name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteDish(id),
+      },
+    ]);
+  };
+
+  const cycleCategory = () => {
+    if (!selectedCategory) {
+      setSelectedCategory(categories[0] ?? null);
+      return;
+    }
+    const idx = categories.indexOf(selectedCategory);
+    if (idx === -1 || idx === categories.length - 1) {
+      setSelectedCategory(null);
+    } else {
+      setSelectedCategory(categories[idx + 1]);
+    }
+  };
+
+  const cycleDietary = () => {
+    if (!selectedDietary) {
+      setSelectedDietary(dietaryTags[0] ?? null);
+      return;
+    }
+    const idx = dietaryTags.indexOf(selectedDietary);
+    if (idx === -1 || idx === dietaryTags.length - 1) {
+      setSelectedDietary(null);
+    } else {
+      setSelectedDietary(dietaryTags[idx + 1]);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Header: Back button, Title, and + New Dish action */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButtonSkeleton}
+            style={styles.backButton}
             onPress={() => router.back()}
           >
             <Text style={styles.backText}>← Home</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Dishes</Text>
           <TouchableOpacity
-            style={styles.addButtonSkeleton}
+            style={styles.addButton}
             onPress={() => router.push('/new-dish')}
           >
             <Text style={styles.addText}>+ New</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar + Filter Row (Favorites, Category, Dietary) */}
+        {/* Search Bar + Filter Chips */}
         <View style={styles.controlsSection}>
-          <View style={styles.searchSkeleton}>
-            <Text style={styles.placeholderText}>Search dishes or restaurants...</Text>
-          </View>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search dishes, descriptions, or restaurants..."
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
 
-          <View style={styles.filterRow}>
-            <View style={styles.filterChipSkeleton}>
-              <Text style={styles.filterChipText}>★ Favorites</Text>
-            </View>
-            <View style={styles.filterChipSkeleton}>
-              <Text style={styles.filterChipText}>Category ▼</Text>
-            </View>
-            <View style={styles.filterChipSkeleton}>
-              <Text style={styles.filterChipText}>Dietary ▼</Text>
-            </View>
-          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                favoritesOnly && styles.filterChipActive,
+              ]}
+              onPress={() => setFavoritesOnly((prev) => !prev)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  favoritesOnly && styles.filterChipTextActive,
+                ]}
+              >
+                ★ Favorites
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                selectedCategory && styles.filterChipActive,
+              ]}
+              onPress={cycleCategory}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedCategory && styles.filterChipTextActive,
+                ]}
+              >
+                {selectedCategory
+                  ? `Category: ${selectedCategory}`
+                  : 'Category: All'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                selectedDietary && styles.filterChipActive,
+              ]}
+              onPress={cycleDietary}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedDietary && styles.filterChipTextActive,
+                ]}
+              >
+                {selectedDietary
+                  ? `Dietary: ${selectedDietary}`
+                  : 'Dietary: All'}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
-        {/* Scrollable Dish Cards List */}
+        {/* Dish Cards List */}
         <ScrollView
           style={styles.listScroll}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
-          {dishSkeletons.map((item) => (
-            <View key={item} style={styles.cardSkeleton}>
-              {/* Top Section: Single Dish Photo + Action Icons */}
-              <View style={styles.coverImageSkeleton}>
-                <Text style={styles.coverHint}>1 Dish Photo</Text>
-                <View style={styles.cardCornerActions}>
-                  <View style={styles.iconBadgeSkeleton}>
-                    <Text style={styles.iconText}>★</Text>
-                  </View>
-                  <View style={styles.iconBadgeSkeleton}>
-                    <Text style={styles.iconText}>🗑</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Card Body: Mapped directly to your Dish fields */}
-              <View style={styles.cardBody}>
-                {/* Row 1: Dish Name + Price */}
-                <View style={styles.cardTitleRow}>
-                  <View style={styles.namePlaceholder} />
-                  <View style={styles.priceBadgeSkeleton}>
-                    <Text style={styles.priceText}>$--.--</Text>
-                  </View>
-                </View>
-
-                {/* Row 2: Linked Restaurant + Dish ID */}
-                <View style={styles.metaRow}>
-                  <Text style={styles.restaurantRefText}>Restaurant: #REST-00{item}</Text>
-                  <Text style={styles.idText}>ID: #DISH-00{item}</Text>
-                </View>
-
-                {/* Row 3: Category & Dietary Tags */}
-                <View style={styles.tagsRow}>
-                  <View style={styles.categoryPillSkeleton}>
-                    <Text style={styles.pillText}>Category</Text>
-                  </View>
-                  <View style={styles.dietaryPillSkeleton}>
-                    <Text style={styles.dietaryText}>+ Dietary Tag</Text>
-                  </View>
-                  <View style={styles.dietaryPillSkeleton}>
-                    <Text style={styles.dietaryText}>+ Dietary Tag</Text>
-                  </View>
-                </View>
-
-                {/* Row 4: Description Preview */}
-                <View style={styles.descriptionGroup}>
-                  <View style={styles.descLineFull} />
-                  <View style={styles.descLineShort} />
-                </View>
-              </View>
+          {filteredDishes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>No dishes found</Text>
+              <Text style={styles.emptySubtitle}>
+                {dishes.length === 0
+                  ? 'Tap "+ New" in the top right to log your first dish.'
+                  : 'Try clearing your search or filters.'}
+              </Text>
             </View>
-          ))}
+          ) : (
+            filteredDishes.map((dish) => {
+              const restaurantName =
+                restaurantMap[dish.restaurantId] || 'Unknown Restaurant';
+
+              return (
+                <View key={dish.id} style={styles.card}>
+                  {/* Square 1:1 Dish Photo or Compact Header */}
+                  {dish.image ? (
+                    <View style={styles.coverWrapper}>
+                      <Image
+                        source={{ uri: dish.image }}
+                        style={styles.coverImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.cardCornerActions}>
+                        <TouchableOpacity
+                          style={styles.iconBadge}
+                          onPress={() => toggleFavoriteDish(dish.id)}
+                        >
+                          <Text
+                            style={[
+                              styles.starIcon,
+                              dish.isFavorite && styles.starIconActive,
+                            ]}
+                          >
+                            ★
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.iconBadge}
+                          onPress={() => confirmDelete(dish.id, dish.name)}
+                        >
+                          <Text style={styles.deleteIcon}>🗑</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.noCoverHeader}>
+                      <Text style={styles.restaurantRefText}>
+                        {restaurantName}
+                      </Text>
+                      <View style={styles.inlineActions}>
+                        <TouchableOpacity
+                          style={styles.iconBadge}
+                          onPress={() => toggleFavoriteDish(dish.id)}
+                        >
+                          <Text
+                            style={[
+                              styles.starIcon,
+                              dish.isFavorite && styles.starIconActive,
+                            ]}
+                          >
+                            ★
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.iconBadge}
+                          onPress={() => confirmDelete(dish.id, dish.name)}
+                        >
+                          <Text style={styles.deleteIcon}>🗑</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Card Body */}
+                  <View style={styles.cardBody}>
+                    {/* Dish Name + Price */}
+                    <View style={styles.cardTitleRow}>
+                      <Text style={styles.dishName}>{dish.name}</Text>
+                      {dish.price > 0 && (
+                        <View style={styles.priceBadge}>
+                          <Text style={styles.priceText}>
+                            ${dish.price.toFixed(2)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Linked Restaurant Name (shown here when photo is present) */}
+                    {dish.image && (
+                      <Text style={styles.restaurantRefText}>
+                        {restaurantName}
+                      </Text>
+                    )}
+
+                    {/* Category & Dietary Tag Pills */}
+                    <View style={styles.tagsRow}>
+                      <View style={styles.categoryPill}>
+                        <Text style={styles.pillText}>{dish.category}</Text>
+                      </View>
+                      {dish.dietaryTags.map((tag) => (
+                        <View key={tag} style={styles.dietaryPill}>
+                          <Text style={styles.dietaryText}>{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    {/* Description */}
+                    {dish.description ? (
+                      <Text style={styles.descriptionText}>
+                        {dish.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -133,7 +340,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  backButtonSkeleton: {
+  backButton: {
     paddingVertical: 4,
     paddingRight: 8,
   },
@@ -147,19 +354,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  addButtonSkeleton: {
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#9CA3AF',
+  addButton: {
+    backgroundColor: '#111827',
     borderRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
   },
   addText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#374151',
+    color: '#FFFFFF',
   },
 
   /* --- SEARCH & FILTERS --- */
@@ -170,37 +374,39 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  searchSkeleton: {
+  searchInput: {
     height: 42,
     backgroundColor: '#F9FAFB',
     borderWidth: 1.5,
-    borderStyle: 'dashed',
     borderColor: '#D1D5DB',
     borderRadius: 10,
     paddingHorizontal: 12,
-    justifyContent: 'center',
-  },
-  placeholderText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#111827',
   },
   filterRow: {
     flexDirection: 'row',
     gap: 8,
   },
-  filterChipSkeleton: {
+  filterChip: {
     backgroundColor: '#F3F4F6',
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
+    borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
+  filterChipActive: {
+    backgroundColor: '#111827',
+    borderColor: '#111827',
+  },
   filterChipText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#4B5563',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
 
   /* --- DISH CARDS --- */
@@ -212,25 +418,45 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 32,
   },
-  cardSkeleton: {
-    backgroundColor: '#F9FAFB',
+  emptyState: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 6,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
+    borderColor: '#E5E7EB',
     borderRadius: 14,
     overflow: 'hidden',
   },
-  coverImageSkeleton: {
-    height: 115,
-    backgroundColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
+  coverWrapper: {
+    width: '100%',
+    aspectRatio: 1,
     position: 'relative',
+    backgroundColor: '#E5E7EB',
   },
-  coverHint: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6B7280',
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  noCoverHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 12,
   },
   cardCornerActions: {
     position: 'absolute',
@@ -239,24 +465,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
   },
-  iconBadgeSkeleton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  inlineActions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  iconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#9CA3AF',
+    borderColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconText: {
+  starIcon: {
+    fontSize: 15,
+    color: '#9CA3AF',
+  },
+  starIconActive: {
+    color: '#F59E0B',
+  },
+  deleteIcon: {
     fontSize: 13,
     color: '#6B7280',
   },
   cardBody: {
     padding: 14,
-    gap: 10,
+    gap: 8,
   },
   cardTitleRow: {
     flexDirection: 'row',
@@ -264,14 +500,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  namePlaceholder: {
-    height: 18,
-    width: '58%',
-    backgroundColor: '#D1D5DB',
-    borderRadius: 4,
+  dishName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    flex: 1,
   },
-  priceBadgeSkeleton: {
-    backgroundColor: '#E5E7EB',
+  priceBadge: {
+    backgroundColor: '#F3F4F6',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -279,29 +515,20 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    color: '#111827',
   },
   restaurantRefText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: '#6B7280',
-  },
-  idText: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
+    marginTop: 2,
   },
-  categoryPillSkeleton: {
+  categoryPill: {
     backgroundColor: '#E5E7EB',
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -312,10 +539,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
   },
-  dietaryPillSkeleton: {
+  dietaryPill: {
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderStyle: 'dashed',
     borderColor: '#D1D5DB',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -323,22 +549,13 @@ const styles = StyleSheet.create({
   },
   dietaryText: {
     fontSize: 11,
-    color: '#6B7280',
+    fontWeight: '600',
+    color: '#4B5563',
   },
-  descriptionGroup: {
-    gap: 6,
+  descriptionText: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#4B5563',
     marginTop: 2,
-  },
-  descLineFull: {
-    height: 10,
-    width: '100%',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
-  },
-  descLineShort: {
-    height: 10,
-    width: '72%',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
   },
 });
