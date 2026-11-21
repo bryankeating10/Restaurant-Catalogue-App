@@ -21,6 +21,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.settingsButton}
             activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             onPress={() => router.push('/settings')}
           >
             <Text style={styles.settingsText}>⚙</Text>
@@ -51,9 +52,9 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.activeButton}
               activeOpacity={0.7}
-              onPress={() => router.push('/dining-entries')}
+              onPress={() => router.push('/new-entry')}
             >
-              <Text style={styles.activeLabel}>Dining Entries</Text>
+              <Text style={styles.activeLabel}>+ New Entry</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
