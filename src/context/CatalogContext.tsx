@@ -35,6 +35,19 @@ interface CatalogContextType {
   ) => Promise<Dish>;
   toggleFavoriteDish: (id: string) => Promise<void>;
   deleteDish: (id: string) => Promise<void>;
+  // Dining Entry Actions
+  addDiningEntry: (
+    data: Omit<DiningEntry, 'id' | 'isFavorite'>
+  ) => Promise<DiningEntry>;
+  toggleFavoriteEntry: (id: string) => Promise<void>;
+  deleteDiningEntry: (id: string) => Promise<void>;
+  // Settings Actions
+  addCuisine: (name: string) => Promise<void>;
+  removeCuisine: (name: string) => Promise<void>;
+  addCategory: (name: string) => Promise<void>;
+  removeCategory: (name: string) => Promise<void>;
+  addDietaryTag: (name: string) => Promise<void>;
+  removeDietaryTag: (name: string) => Promise<void>;
 }
 
 const DEFAULT_CUISINES = [
@@ -80,7 +93,6 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
   );
   const [pendingDishId, setPendingDishId] = useState<string | null>(null);
 
-  // Load saved data on startup
   useEffect(() => {
     (async () => {
       try {
@@ -179,6 +191,82 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     await persist({ dishes: updated });
   };
 
+  const addDiningEntry = async (
+    data: Omit<DiningEntry, 'id' | 'isFavorite'>
+  ): Promise<DiningEntry> => {
+    const newEntry: DiningEntry = {
+      ...data,
+      id: `entry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      isFavorite: false,
+    };
+    const updated = [newEntry, ...entries];
+    setEntries(updated);
+    await persist({ entries: updated });
+    return newEntry;
+  };
+
+  const toggleFavoriteEntry = async (id: string) => {
+    const updated = entries.map((e) =>
+      e.id === id ? { ...e, isFavorite: !e.isFavorite } : e
+    );
+    setEntries(updated);
+    await persist({ entries: updated });
+  };
+
+  const deleteDiningEntry = async (id: string) => {
+    const updated = entries.filter((e) => e.id !== id);
+    setEntries(updated);
+    await persist({ entries: updated });
+  };
+
+  const addCuisine = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || cuisines.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+      return;
+    }
+    const updated = [...cuisines, trimmed];
+    setCuisines(updated);
+    await persist({ cuisines: updated });
+  };
+
+  const removeCuisine = async (name: string) => {
+    const updated = cuisines.filter((c) => c !== name);
+    setCuisines(updated);
+    await persist({ cuisines: updated });
+  };
+
+  const addCategory = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || categories.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+      return;
+    }
+    const updated = [...categories, trimmed];
+    setCategories(updated);
+    await persist({ categories: updated });
+  };
+
+  const removeCategory = async (name: string) => {
+    const updated = categories.filter((c) => c !== name);
+    setCategories(updated);
+    await persist({ categories: updated });
+  };
+
+  const addDietaryTag = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || dietaryTags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
+      return;
+    }
+    const updated = [...dietaryTags, trimmed];
+    setDietaryTags(updated);
+    await persist({ dietaryTags: updated });
+  };
+
+  const removeDietaryTag = async (name: string) => {
+    const updated = dietaryTags.filter((t) => t !== name);
+    setDietaryTags(updated);
+    await persist({ dietaryTags: updated });
+  };
+
   const getRestaurantStats = (restaurantId: string): RestaurantStats => {
     const linked = entries
       .filter((e) => e.restaurantId === restaurantId)
@@ -236,6 +324,15 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
         addDish,
         toggleFavoriteDish,
         deleteDish,
+        addDiningEntry,
+        toggleFavoriteEntry,
+        deleteDiningEntry,
+        addCuisine,
+        removeCuisine,
+        addCategory,
+        removeCategory,
+        addDietaryTag,
+        removeDietaryTag,
       }}
     >
       {children}

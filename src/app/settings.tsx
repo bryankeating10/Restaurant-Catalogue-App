@@ -1,20 +1,59 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCatalog } from '../context/CatalogContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const {
+    cuisines,
+    categories,
+    dietaryTags,
+    addCuisine,
+    removeCuisine,
+    addCategory,
+    removeCategory,
+    addDietaryTag,
+    removeDietaryTag,
+  } = useCatalog();
 
-  // Sample default placeholders for your customizable dropdown lists
-  const sampleCuisines = ['Italian', 'Japanese', 'Mexican', 'Thai', 'American'];
-  const sampleCategories = ['Appetizer', 'Main', 'Antipasta', 'Dessert', 'Drink'];
-  const sampleDietaryTags = ['Vegetarian', 'Vegan', 'Gluten-Free', 'Lactose-Free'];
+  const [newCuisine, setNewCuisine] = useState('');
+  const [newCategory, setNewCategory] = useState('');
+  const [newTag, setNewTag] = useState('');
+
+  const handleAddCuisine = async () => {
+    if (!newCuisine.trim()) return;
+    await addCuisine(newCuisine);
+    setNewCuisine('');
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+    await addCategory(newCategory);
+    setNewCategory('');
+  };
+
+  const handleAddTag = async () => {
+    if (!newTag.trim()) return;
+    await addDietaryTag(newTag);
+    setNewTag('');
+  };
+
+  const confirmRemove = (label: string, onConfirm: () => Promise<void>) => {
+    Alert.alert('Remove Option', `Remove "${label}" from dropdown options?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: onConfirm },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -22,7 +61,7 @@ export default function SettingsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButtonSkeleton}
+            style={styles.backButton}
             onPress={() => router.back()}
           >
             <Text style={styles.backText}>← Home</Text>
@@ -34,106 +73,161 @@ export default function SettingsScreen() {
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* 1. CUSTOM CUISINES (Used in New Restaurant) */}
-          <View style={styles.sectionCardSkeleton}>
+          {/* 1. CUSTOM CUISINES */}
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Cuisines</Text>
-              <Text style={styles.sectionSubtitle}>Dropdown options for Restaurants</Text>
+              <Text style={styles.sectionSubtitle}>
+                Dropdown options for Restaurants
+              </Text>
             </View>
 
-            {/* Add New Cuisine Input Row */}
             <View style={styles.addRow}>
-              <View style={styles.addInputSkeleton}>
-                <Text style={styles.placeholderText}>Add new cuisine (e.g., Korean)...</Text>
-              </View>
-              <View style={styles.addChipButtonSkeleton}>
+              <TextInput
+                style={styles.addInput}
+                placeholder="Add new cuisine (e.g., Korean)..."
+                placeholderTextColor="#9CA3AF"
+                value={newCuisine}
+                onChangeText={setNewCuisine}
+                onSubmitEditing={handleAddCuisine}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={styles.addChipButton}
+                activeOpacity={0.75}
+                onPress={handleAddCuisine}
+              >
                 <Text style={styles.addChipButtonText}>+ Add</Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
-            {/* Current Cuisine Pills */}
             <View style={styles.pillsContainer}>
-              {sampleCuisines.map((item) => (
-                <View key={item} style={styles.itemPillSkeleton}>
+              {cuisines.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={styles.itemPill}
+                  onPress={() =>
+                    confirmRemove(item, () => removeCuisine(item))
+                  }
+                >
                   <Text style={styles.itemPillText}>{item}</Text>
                   <Text style={styles.removeIcon}>×</Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* 2. CUSTOM DISH CATEGORIES (Used in New Dish) */}
-          <View style={styles.sectionCardSkeleton}>
+          {/* 2. CUSTOM DISH CATEGORIES */}
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Dish Categories</Text>
-              <Text style={styles.sectionSubtitle}>Dropdown options for Dishes</Text>
+              <Text style={styles.sectionSubtitle}>
+                Dropdown options for Dishes
+              </Text>
             </View>
 
             <View style={styles.addRow}>
-              <View style={styles.addInputSkeleton}>
-                <Text style={styles.placeholderText}>Add category (e.g., Side, Soup)...</Text>
-              </View>
-              <View style={styles.addChipButtonSkeleton}>
+              <TextInput
+                style={styles.addInput}
+                placeholder="Add category (e.g., Soup, Brunch)..."
+                placeholderTextColor="#9CA3AF"
+                value={newCategory}
+                onChangeText={setNewCategory}
+                onSubmitEditing={handleAddCategory}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={styles.addChipButton}
+                activeOpacity={0.75}
+                onPress={handleAddCategory}
+              >
                 <Text style={styles.addChipButtonText}>+ Add</Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.pillsContainer}>
-              {sampleCategories.map((item) => (
-                <View key={item} style={styles.itemPillSkeleton}>
+              {categories.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={styles.itemPill}
+                  onPress={() =>
+                    confirmRemove(item, () => removeCategory(item))
+                  }
+                >
                   <Text style={styles.itemPillText}>{item}</Text>
                   <Text style={styles.removeIcon}>×</Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* 3. CUSTOM DIETARY TAGS (Used in New Dish) */}
-          <View style={styles.sectionCardSkeleton}>
+          {/* 3. CUSTOM DIETARY TAGS */}
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Dietary Tags</Text>
-              <Text style={styles.sectionSubtitle}>Multi-select tags for Dishes</Text>
+              <Text style={styles.sectionSubtitle}>
+                Multi-select tags for Dishes
+              </Text>
             </View>
 
             <View style={styles.addRow}>
-              <View style={styles.addInputSkeleton}>
-                <Text style={styles.placeholderText}>Add tag (e.g., Nut-Free, Halal)...</Text>
-              </View>
-              <View style={styles.addChipButtonSkeleton}>
+              <TextInput
+                style={styles.addInput}
+                placeholder="Add tag (e.g., Halal, Spicy)..."
+                placeholderTextColor="#9CA3AF"
+                value={newTag}
+                onChangeText={setNewTag}
+                onSubmitEditing={handleAddTag}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={styles.addChipButton}
+                activeOpacity={0.75}
+                onPress={handleAddTag}
+              >
                 <Text style={styles.addChipButtonText}>+ Add</Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.pillsContainer}>
-              {sampleDietaryTags.map((item) => (
-                <View key={item} style={styles.itemPillSkeleton}>
+              {dietaryTags.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={styles.itemPill}
+                  onPress={() =>
+                    confirmRemove(item, () => removeDietaryTag(item))
+                  }
+                >
                   <Text style={styles.itemPillText}>{item}</Text>
                   <Text style={styles.removeIcon}>×</Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* 4. GENERAL PREFERENCES & DATA PLACEHOLDERS */}
-          <View style={styles.sectionCardSkeleton}>
+          {/* 4. STORAGE INFO */}
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Preferences & Data</Text>
-              <Text style={styles.sectionSubtitle}>Display & storage options</Text>
+              <Text style={styles.sectionTitle}>Data & Storage</Text>
+              <Text style={styles.sectionSubtitle}>
+                Saved locally on this device
+              </Text>
             </View>
 
-            <View style={styles.settingRowSkeleton}>
-              <Text style={styles.settingRowLabel}>Currency Symbol</Text>
-              <View style={styles.valueBadgeSkeleton}>
-                <Text style={styles.valueBadgeText}>USD ($) ▼</Text>
+            <View style={styles.settingRow}>
+              <Text style={styles.settingRowLabel}>Currency</Text>
+              <View style={styles.valueBadge}>
+                <Text style={styles.valueBadgeText}>USD ($)</Text>
               </View>
             </View>
 
-            <View style={styles.settingRowSkeleton}>
-              <Text style={styles.settingRowLabel}>Cloud Sync Status</Text>
-              <View style={styles.valueBadgeSkeleton}>
-                <Text style={styles.valueBadgeText}>Local Only</Text>
+            <View style={styles.settingRow}>
+              <Text style={styles.settingRowLabel}>Storage Mode</Text>
+              <View style={styles.valueBadge}>
+                <Text style={styles.valueBadgeText}>Local Device</Text>
               </View>
             </View>
           </View>
@@ -160,7 +254,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  backButtonSkeleton: {
+  backButton: {
     paddingVertical: 4,
     paddingRight: 8,
   },
@@ -175,7 +269,7 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   headerSpacer: {
-    width: 50,
+    width: 60,
   },
   scroll: {
     flex: 1,
@@ -185,13 +279,10 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 36,
   },
-
-  /* --- SECTION CARDS --- */
-  sectionCardSkeleton: {
+  sectionCard: {
     backgroundColor: '#F9FAFB',
     borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
+    borderColor: '#E5E7EB',
     borderRadius: 14,
     padding: 16,
     gap: 12,
@@ -206,36 +297,27 @@ const styles = StyleSheet.create({
   },
   sectionSubtitle: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
-
-  /* --- ADD INPUT ROW --- */
   addRow: {
     flexDirection: 'row',
     gap: 8,
   },
-  addInputSkeleton: {
+  addInput: {
     flex: 1,
-    height: 42,
+    height: 44,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderStyle: 'dashed',
     borderColor: '#D1D5DB',
     borderRadius: 10,
     paddingHorizontal: 12,
-    justifyContent: 'center',
+    fontSize: 14,
+    color: '#111827',
   },
-  placeholderText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
-  addChipButtonSkeleton: {
-    height: 42,
-    paddingHorizontal: 14,
-    backgroundColor: '#E5E7EB',
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderColor: '#9CA3AF',
+  addChipButton: {
+    height: 44,
+    paddingHorizontal: 16,
+    backgroundColor: '#111827',
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -243,16 +325,14 @@ const styles = StyleSheet.create({
   addChipButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: '#FFFFFF',
   },
-
-  /* --- TAG PILLS --- */
   pillsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  itemPillSkeleton: {
+  itemPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -266,16 +346,14 @@ const styles = StyleSheet.create({
   itemPillText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: '#111827',
   },
   removeIcon: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#9CA3AF',
   },
-
-  /* --- PREFERENCES ROWS --- */
-  settingRowSkeleton: {
+  settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -291,11 +369,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
   },
-  valueBadgeSkeleton: {
+  valueBadge: {
     backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -303,6 +378,6 @@ const styles = StyleSheet.create({
   valueBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#374151',
   },
 });

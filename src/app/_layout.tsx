@@ -11,7 +11,6 @@ export default function RootLayout() {
         <Stack.Screen name="dishes" />
         <Stack.Screen name="new-dish" />
         <Stack.Screen name="dining-entries" />
-        <Stack.Screen name="new-dining-entry" />
         <Stack.Screen name="new-entry" />
         <Stack.Screen name="record-visit" />
         <Stack.Screen name="record-takeout" />

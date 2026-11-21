@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -49,13 +49,15 @@ export default function NewDishScreen() {
   const [dietaryModalOpen, setDietaryModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // If user created a new restaurant from inside New Dish, auto-select it
-  useEffect(() => {
-    if (pendingRestaurantId) {
-      setRestaurantId(pendingRestaurantId);
-      setPendingRestaurantId(null);
-    }
-  }, [pendingRestaurantId, setPendingRestaurantId]);
+  // Auto-select newly created restaurant only when NewDishScreen regains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (pendingRestaurantId) {
+        setRestaurantId(pendingRestaurantId);
+        setPendingRestaurantId(null);
+      }
+    }, [pendingRestaurantId, setPendingRestaurantId])
+  );
 
   const selectedRestaurant = restaurants.find((r) => r.id === restaurantId);
 

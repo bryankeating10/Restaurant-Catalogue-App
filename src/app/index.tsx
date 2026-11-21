@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -7,10 +9,82 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCatalog } from '../context/CatalogContext';
+
+interface RecentActivityItem {
+  id: string;
+  kind: 'Restaurant' | 'Dish' | 'Visit' | 'Takeout' | 'Delivery';
+  title: string;
+  subtitle: string;
+  timestamp: string;
+  image?: string;
+  route: '/restaurants' | '/dishes' | '/dining-entries';
+}
 
 export default function HomeScreen() {
   const router = useRouter();
-  const recentSkeletons = [1, 2, 3, 4, 5];
+  const { restaurants, dishes, entries } = useCatalog();
+
+  const recentFeed = useMemo(() => {
+    const restMap: Record<string, string> = {};
+    restaurants.forEach((r) => {
+      restMap[r.id] = r.name;
+    });
+
+    const items: RecentActivityItem[] = [];
+
+    restaurants.forEach((r) => {
+      items.push({
+        id: r.id,
+        kind: 'Restaurant',
+        title: r.name,
+        subtitle: r.cuisine,
+        timestamp: r.createdAt,
+        image: r.coverImage,
+        route: '/restaurants',
+      });
+    });
+
+    dishes.forEach((d) => {
+      items.push({
+        id: d.id,
+        kind: 'Dish',
+        title: d.name,
+        subtitle: `${restMap[d.restaurantId] || 'Restaurant'} · ${d.category}`,
+        timestamp: d.createdAt,
+        image: d.image,
+        route: '/dishes',
+      });
+    });
+
+    entries.forEach((e) => {
+      const kindLabel =
+        e.type === 'visit'
+          ? 'Visit'
+          : e.type === 'takeout'
+          ? 'Takeout'
+          : 'Delivery';
+      const firstPhoto = e.dishReviews.flatMap((rev) => rev.photos)[0];
+      items.push({
+        id: e.id,
+        kind: kindLabel,
+        title: restMap[e.restaurantId] || 'Dining Entry',
+        subtitle: `${e.dishReviews.length} ${
+          e.dishReviews.length === 1 ? 'dish' : 'dishes'
+        }${typeof e.totalCost === 'number' ? ` · $${e.totalCost.toFixed(2)}` : ''}`,
+        timestamp: e.visitedAt,
+        image: firstPhoto,
+        route: '/dining-entries',
+      });
+    });
+
+    return items
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+      .slice(0, 12);
+  }, [restaurants, dishes, entries]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -67,25 +141,65 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* BOTTOM HALF: Recent Additions Skeleton List */}
+        {/* BOTTOM HALF: Live Recent Additions List */}
         <View style={styles.bottomHalf}>
-          <Text style={styles.sectionTitle}>Recent Additions</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Recent Additions</Text>
+            <TouchableOpacity onPress={() => router.push('/dining-entries')}>
+              <Text style={styles.viewAllText}>All Entries →</Text>
+            </TouchableOpacity>
+          </View>
 
           <ScrollView
             style={styles.listContainer}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           >
-            {recentSkeletons.map((item) => (
-              <View key={item} style={styles.skeletonRow}>
-                <View style={styles.skeletonAvatar} />
-                <View style={styles.skeletonTextGroup}>
-                  <View style={styles.skeletonTitleBar} />
-                  <View style={styles.skeletonSubtitleBar} />
-                </View>
-                <View style={styles.skeletonBadge} />
+            {recentFeed.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>Your catalog is empty</Text>
+                <Text style={styles.emptySubtitle}>
+                  Add a restaurant or tap "+ New Entry" above to start logging
+                  meals.
+                </Text>
               </View>
-            ))}
+            ) : (
+              recentFeed.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.recentRow}
+                  activeOpacity={0.75}
+                  onPress={() => router.push(item.route)}
+                >
+                  {item.image ? (
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.avatarImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.avatarFallback}>
+                      <Text style={styles.avatarInitial}>
+                        {item.title.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={styles.textGroup}>
+                    <Text style={styles.rowTitle} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={styles.rowSubtitle} numberOfLines={1}>
+                      {item.subtitle}
+                    </Text>
+                  </View>
+
+                  <View style={styles.kindBadge}>
+                    <Text style={styles.kindBadgeText}>{item.kind}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         </View>
       </View>
@@ -165,11 +279,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 10,
+  },
+  viewAllText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
   },
   listContainer: {
     flex: 1,
@@ -178,42 +302,78 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 12,
   },
-  skeletonRow: {
+  emptyCard: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    gap: 4,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 10,
-    padding: 12,
+    padding: 10,
     gap: 12,
   },
-  skeletonAvatar: {
+  avatarImage: {
     width: 44,
     height: 44,
     borderRadius: 8,
     backgroundColor: '#E5E7EB',
   },
-  skeletonTextGroup: {
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitial: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  textGroup: {
     flex: 1,
-    gap: 8,
+    gap: 2,
   },
-  skeletonTitleBar: {
-    height: 14,
-    width: '65%',
-    borderRadius: 4,
-    backgroundColor: '#D1D5DB',
+  rowTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
   },
-  skeletonSubtitleBar: {
-    height: 10,
-    width: '40%',
-    borderRadius: 4,
-    backgroundColor: '#E5E7EB',
+  rowSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
   },
-  skeletonBadge: {
-    width: 54,
-    height: 22,
+  kindBadge: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 11,
-    backgroundColor: '#E5E7EB',
+  },
+  kindBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#374151',
   },
 });
